@@ -13,7 +13,7 @@ Wykorzystano postacie macierzy określone wzorami 3, 4 i 5 (na stronie 3) oraz n
 macierzy z pierwszego źródła w taki sposób, aby środek punktu materialnego był w środku każdej z dwóch części wahadła (a nie na końcu).
 Dodatkowo wyżej wymienione macierze posłużyły do rozkładu macierzy M(y) oraz f(y, y', u) na iloczyny macierzy
 - https://books.google.pl/books?id=rnUiAgAAQBAJ&pg=PA22&lpg=PA22&dq=state+space+equation+double+inverted+pendulum&source=bl&ots=EKB8xdgzjy&sig=RUL0ZShfNqiyh7tNfTzbXFGyR9M&hl=pl&sa=X&ved=0CDQQ6AEwAjgKahUKEwjynuqOrovGAhULPhQKHbQMALg#v=onepage&q=state%20space%20equation%20double%20inverted%20pendulum&f=true
-Postaciemacierzy A i B wykorzystywane w metodzie LQR (strona 24) oraz stosowanie implementacji metody LQR w Matlabie (strona 25)
+Postacie macierzy A i B wykorzystywane w metodzie LQR (strona 24) oraz stosowanie implementacji metody LQR w Matlabie (strona 25)
 - http://www.ijarcsse.com/docs/papers/february2012/volume_2_issue_2/V2I2066A.pdf
 Inne, mniej istotne informacje (porównanie z materiałami na powyższych stronach)
 - http://eprints.lancs.ac.uk/20405/1/download.pdf
