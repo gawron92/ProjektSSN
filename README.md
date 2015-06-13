@@ -1,8 +1,11 @@
 # ProjektSSN
 Sterowanie podwójnym odwróconym wahadłem z użyciem sztucznych sieci neuronowych
 
+Generator danych dla sieci
+==========================
+
 Materiały teoretyczne
-============
+---------------------
 Algorytm stabilizacji pozycji wahadła został opracowany w oparciu o poniższe materiały:
 - http://www3.math.tu-berlin.de/Vorlesungen/SS12/Kontrolltheorie/matlab/inverted_pendulum.pdf
 Głównie strona 3 - postać macierzy M(y), oraz f(y, y', u). Z drugiej macierzy usunięto drugi i trzeci
@@ -19,8 +22,8 @@ Inne, mniej istotne informacje (porównanie z materiałami na powyższych strona
 - http://eprints.lancs.ac.uk/20405/1/download.pdf
 Inne, mniej istotne informacje (porównanie z materiałami na powyższych stronach)
 
-Generator danych dla sieci
-============
+Generator plików z danymi
+-------------------------
 Generator (plik ssn_generator.m) umożliwia wygenerowanie zbioru danych uczących i testowych dla sieci neuronowej.
 Wygenerowany plik zawiera następujące dane (w kolejnych kolumnach):
 - wartość kroku czasowego
@@ -31,9 +34,10 @@ Wygenerowany plik zawiera następujące dane (w kolejnych kolumnach):
 - prędkość kątową pierwszego wahadła
 - prędkość kątową drugiego wahadła
 - wartość przesunięcia, którego użyto do zmiany pozycji podstawki w celu ustabilizowania wahadła
+Znajdują się w nim zatem zarówno wartości przesyłane na wejście sieci (kolumny od 2 do 7) oraz rezultat działania sieci (kolumna 8)
 
 Wykres stanu wahadła i jego parametrów
-============
+--------------------------------------
 Plik ssn_wykresy.m zawiera program umożliwiający obserwację zmian stanu wahadła (wizualizację jego stanu) oraz dwa
 kolejne wykresy, z których pierwszy pokazuje zmiany pozycji i prędkości podstawki, natomiast drugi wyświetla
 informacje o zmienie wartości kątów dla obu części wahadła
