@@ -24,7 +24,7 @@ Inne, mniej istotne informacje (porównanie z materiałami na powyższych strona
 
 Generator plików z danymi
 -------------------------
-Generator (plik ssn_generator.m) umożliwia wygenerowanie zbioru danych uczących i testowych dla sieci neuronowej.
+Generator (plik ssn_projekt.m) umożliwia wygenerowanie zbioru danych uczących i testowych dla sieci neuronowej.
 Wygenerowany plik zawiera następujące dane (w kolejnych kolumnach):
 - wartość kroku czasowego
 - pozycję podstawki na której znajduje się wahadło
@@ -39,6 +39,6 @@ Znajdują się w nim zatem zarówno wartości przesyłane na wejście sieci (kol
 
 Wykres stanu wahadła i jego parametrów
 --------------------------------------
-Plik ssn_wykresy.m zawiera program umożliwiający obserwację zmian stanu wahadła (wizualizację jego stanu) oraz dwa
+Plik ssn_projekt.m zawiera program umożliwiający obserwację zmian stanu wahadła (wizualizację jego stanu) oraz dwa
 kolejne wykresy, z których pierwszy pokazuje zmiany pozycji i prędkości podstawki, natomiast drugi wyświetla
 informacje o zmienie wartości kątów dla obu części wahadła
