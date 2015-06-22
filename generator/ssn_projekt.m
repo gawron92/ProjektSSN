@@ -20,27 +20,54 @@ function ssn_projekt()
     y2_0 = [0, 0, 0];
     
     % wybierz dostepne akcje
-    c1 = 'Symulacja z użyciem LQR';
-    c2 = 'Wygeneruj dane uczące';
-    c3 = 'Naucz sieć neuronową';
-    c4 = 'Symulacja z użuciem wytrenowanej sieci';
+    c1 = 'Symulacja z uzyciem LQR (z wykresami)';
+    c2 = 'Symulacja z uzyciem LQR (bez wykresow)';
+    c3 = 'Wygeneruj dane uczace';
+    c4 = 'Naucz siec neuronowa';
+    c5 = 'Symulacja z uzyciem wytrenowanej sieci (z wykresami)';
+    c6 = 'Symulacja z uzyciem wytrenowanej sieci (bez wykres�w)';
     
-    choice = listdlg('Name', 'Wybierz akcję', 'PromptString', 'Dostępne akcję:', 'SelectionMode', 'single', 'ListString', {c1, c2, c3, c4}, 'ListSize', [300 100]);
+    choice = listdlg('Name', 'Wybierz akcje', 'PromptString', 'Dostepne akcje:', 'SelectionMode', 'single', 'ListString', {c1, c2, c3, c4, c5, c6}, 'ListSize', [400 100]);
     
-    % domyslny warunek zakonczenia symulacji
-    hasNext = @(i) i < 1000;
+    % warunek zakonczenia symulacji
+    if ~isempty(choice) && choice ~= 3 && choice ~= 4
+        % okno dialogowe do wprowadzania liczby krokow
+        stepsInput = {'Maksymalna liczba krokow symulacji:'};
+        steps = inputdlg(stepsInput, 'Liczba krokow symulacji', 1, {'1000'});
+        hasNext = @(i) i < str2num(char(steps));
+    else
+        hasNext = @(i) i < 1000;
+    end
+    
+    % usuwanie starych wynikow symulacji metoda LQR
+    if ~isempty(choice) && choice ~= 1 && choice ~= 2
+        if exist('lqr_data.txt', 'file')==2
+            delete('lqr_data.txt');
+        end
+    end
+    
+    % usuwanie starych wynikow symulacji metoda SSN
+    if ~isempty(choice) && choice ~= 5 && choice ~= 6
+        if exist('neural_data.txt', 'file')==2
+            delete('neural_data.txt');
+        end
+    end
     
     % wykonanie procedury w zaleznosci od akcji wybranej przez uzytkownika
     if ~isempty(choice)
         switch choice
             case 1
-                simulate(m, l, g, dt, y1_0, y2_0, hasNext, @forEachLqrAndPlot);
+                simulate(m, l, g, dt, y1_0, y2_0, hasNext, false, @forEachLqrAndPlot);
             case 2
-                generateData(m, l, g, dt);
+                simulate(m, l, g, dt, y1_0, y2_0, hasNext, true, @forEachLqrAndPlot);
             case 3
-                trainNetwork();
+                generateData(m, l, g, dt);
             case 4
-                simulate(m, l, g, dt, y1_0, y2_0, hasNext, @forEachNeural);
+                trainNetwork();
+            case 5
+                simulate(m, l, g, dt, y1_0, y2_0, hasNext, false, @forEachNeural);
+            case 6
+                simulate(m, l, g, dt, y1_0, y2_0, hasNext, true, @forEachNeural);
         end
 
         % zamkniecie plikow jesli jakies zostaly otwarte
@@ -50,24 +77,55 @@ end
 
 % wytrenuj siec
 function trainNetwork()
+    % okno dialogowe do wprowadzania parametrow sieci neuronowej
+    paramsInput = {'Liczba neuronow w warstwie ukrytej:','Liczba epok uczenia:','Akceptowalna wartosc bledu RMSE:'};
+    params = inputdlg(paramsInput, 'Parametry sieci neuronowej oraz uczenia', 1, {'13','2000','1e-05'});
+    
+    % dostepme metody uczenia sieci
+    m1 = 'trainlm';
+    m2 = 'trainbfg'; 
+    m3 = 'trainrp';
+    m4 = 'traingd';
+    
+    % wybor metody uczenia sieci
+    choice = listdlg('Name', 'Wybierz metode uczenia sieci', 'PromptString', 'Dostepne metody:', 'SelectionMode', 'single', 'ListString', {m1, m2, m3, m4}, 'ListSize', [300 100]);
+    
+    % ustawianie odpowiedniej metody
+    learningMethod = m1;
+    if ~isempty(choice)
+        switch choice
+            case 1
+                learningMethod = m1;
+            case 2
+                learningMethod = m2;
+            case 3
+                learningMethod = m3;
+            case 4
+                learningMethod = m4;
+        end
+    end
+
     % minimalne i maksymalne wartosci
     PR = [-8 8; -1 1; -1 1; -1 1; -1 1; -1 1];
     
-    % rozmiar warsts
-    S = [6 13 1];
-    
+    % rozmiar warstw
+    S = [6 str2num(char(params(1))) 1];
+        
     % funkcje przenoszenia
     TF = {'purelin', 'tansig','purelin'};
     
     % algorytm uczenia sie
-    BTF = 'trainlm';
+    BTF = learningMethod;
     
     % utworz siec
     net = newff(PR, S, TF, BTF);
-    net.trainParam.epochs = 2000;
+    %net.trainParam.epochs = params(2);
+    net.trainParam.epochs = str2num(char(params(2)));
+    %net.trainParam.goal = params(3);
+    net.trainParam.goal = str2num(char(params(3)));
 
     % wczytaj dane uczace
-    data = importdata('results.txt')';
+    data = importdata('generator_data.txt')';
     X = data(2:7, :);
     Y = data(8, :);
     
@@ -91,7 +149,7 @@ function generateData(m, l, g, dt)
     N = 20;
     
     % wyświetlenie paska postępu
-    h = waitbar(0, 'Generowanie danych uczących');
+    h = waitbar(0, 'Generowanie danych uczacych');
     
     for i = 1:N
         % sprawdzanie czy losowe parametry początkowe nie są za duże
@@ -103,7 +161,7 @@ function generateData(m, l, g, dt)
         end
         
         % wykonanie symulacji
-        simulate(m, l, g, dt, y1_0, y2_0, hasNext, @forEachGenerator);
+        simulate(m, l, g, dt, y1_0, y2_0, hasNext, true, @forEachGenerator);
         
         % jezeli uzytkownik nie kliknal "x" to zaktualizuj pasek posteku
         if ishandle(h)
@@ -116,17 +174,22 @@ function generateData(m, l, g, dt)
     
     % zamknij pasek postepu
     if ishandle(h)
-        msgbox('Generowanie danych zakończone pomyślnie', 'Koniec');
+        msgbox('Generowanie danych zakonczone pomyslnie', 'Koniec');
         close(h);
     else
-        msgbox('Generowanie przerwane na życzenie użytkownika', 'Koniec');
+        msgbox('Generowanie przerwane na zyczenie uzytkownika', 'Koniec');
     end
 end
 
 % obliczanie korekcji polozenia podstawki za pomoca metody LQR
-function u = forEachNeural(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
+function u = forEachNeural(m, l, g, y, i, dt, T0, G, Q, R, M_, N_, isFast)
     persistent start;
     persistent net;
+    persistent neural_data
+    
+    if isempty(neural_data) 
+        neural_data = fopen('neural_data.txt', 'w+');
+    end
     
     % przy pierwszym uruchomieniu
     if isempty(start)
@@ -140,7 +203,13 @@ function u = forEachNeural(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
     u = sim(net, [y(1); y(3); y(5); y(2); y(4); y(6)]);
     
     % narysuj wykresy
-    forEachPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+    if ~isFast
+        forEachPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+    end
+    
+    % zapisywanie wynikow
+    saved_results = [i*dt y(1) y(3) y(5) y(2) y(4) y(6) u];
+    fprintf(neural_data, '%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\r\n', saved_results);
 end
 
 % obliczanie korekcji polozenia podstawki za pomoca metody LQR
@@ -151,11 +220,11 @@ function u = forEachLqr(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
 end
 
 % zapis danych do pliku
-function u = forEachGenerator(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
-    persistent results
+function u = forEachGenerator(m, l, g, y, i, dt, T0, G, Q, R, M_, N_, isFast)
+    persistent generator_data
     
-    if isempty(results) 
-        results = fopen('results.txt', 'w+');
+    if isempty(generator_data) 
+        generator_data = fopen('generator_data.txt', 'w+');
     end
     
     % wylicz wymuszenie u
@@ -163,7 +232,7 @@ function u = forEachGenerator(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
     
     % zapisywanie wynikow
     saved_results = [i*dt y(1) y(3) y(5) y(2) y(4) y(6) u];
-    fprintf(results, '%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\r\n', saved_results);
+    fprintf(generator_data, '%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\r\n', saved_results);
 end
 
 % rysowanie wykresow
@@ -204,20 +273,20 @@ function u = forEachPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
     plot(cart_x, cart_y, 'b', pendulum1_x, pendulum1_y, 'r', pendulum2_x, pendulum2_y, 'g');
     xlim([-8 8]);
     ylim([-4 12]);
-    title('Podgląd wachadła');
+    title('Podglad wachadla');
     
     % wykres warto?ci polozenia i predkosci podstawki
     subplot('Position', [0.05, 0.1, 0.4, 0.4]);
     plot(t, cart_data);
     legend('x [m]', 'v [m/s]', 'Location', 'southoutside');
-    title('Podstawka wachadła');
+    title('Podstawka wachadla');
     xlabel('Czas [s]');
     
     % wykres warto?ci katow pierwszego i drugiego wahadla
     subplot('Position', [0.55, 0.1, 0.4, 0.4]);
     plot(t, phi_data);
     legend('\phi1 [rad]', '\phi2 [rad]', 'Location', 'southoutside');
-    title('Wychylenie członów');
+    title('Wychylenie czlonow');
     xlabel('Czas [s]');
     
     % przycisk zatrzymania symulacji
@@ -239,16 +308,28 @@ function u = forEachPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
 end
 
 % rysowanie wykresow + liczenie wymuszenia z uzyciem lqr
-function u = forEachLqrAndPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_)
+function u = forEachLqrAndPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_, isFast)
+    persistent lqr_data
+    
+    if isempty(lqr_data) 
+        lqr_data = fopen('lqr_data.txt', 'w+');
+    end
+
     % narysuj wykresy
-    forEachPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+    if ~isFast
+        forEachPlot(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+    end
     
     % wylicz nowa wartosc wymuszenia u
     u = forEachLqr(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+    
+    % zapisywanie wynikow
+    saved_results = [i*dt y(1) y(3) y(5) y(2) y(4) y(6) u];
+    fprintf(lqr_data, '%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\r\n', saved_results);
 end
 
 % wykonaj symulacje dla zadanych parametrow
-function simulate(m, l, g, dt, y1_0, y2_0, hasNext, forEach)
+function simulate(m, l, g, dt, y1_0, y2_0, hasNext, isFast, forEach)
     % zmienna globalna do zatrzymania symulacji
     global stopSimulation
     stopSimulation = false;
@@ -281,7 +362,7 @@ function simulate(m, l, g, dt, y1_0, y2_0, hasNext, forEach)
         y0 = [y(1) y(3) y(5); y(2) y(4) y(6)];
 
         % nowa wartosc wymuszenia u
-        u = forEach(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+        u = forEach(m, l, g, y, i, dt, T0, G, Q, R, M_, N_, isFast);
         
         % zatrzymaj sumacje
         if stopSimulation
