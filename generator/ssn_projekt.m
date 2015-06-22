@@ -2,7 +2,7 @@ function ssn_projekt()
     % ustawienia srodowiska
     clear all;
     clc;
-    
+
     % masa podstawki, pierwszego wahadla i drugiego wahadla
     m = [5, 2, 3];
     % dlugosc pierwszego i drugiego wahadla
@@ -26,8 +26,9 @@ function ssn_projekt()
     c4 = 'Naucz siec neuronowa';
     c5 = 'Symulacja z uzyciem wytrenowanej sieci (z wykresami)';
     c6 = 'Symulacja z uzyciem wytrenowanej sieci (bez wykres�w)';
+    c7 = 'Sprawdz jakosc wytrenowanej sieci (por�wnaj z LQR)';
     
-    choice = listdlg('Name', 'Wybierz akcje', 'PromptString', 'Dostepne akcje:', 'SelectionMode', 'single', 'ListString', {c1, c2, c3, c4, c5, c6}, 'ListSize', [400 100]);
+    choice = listdlg('Name', 'Wybierz akcje', 'PromptString', 'Dostepne akcje:', 'SelectionMode', 'single', 'ListString', {c1, c2, c3, c4, c5, c6, c7}, 'ListSize', [400 100]);
     
     % warunek zakonczenia symulacji
     if ~isempty(choice) && choice ~= 3 && choice ~= 4
@@ -57,22 +58,42 @@ function ssn_projekt()
     if ~isempty(choice)
         switch choice
             case 1
+                [m l g y1_0 y2_0] = getParams();
                 simulate(m, l, g, dt, y1_0, y2_0, hasNext, false, @forEachLqrAndPlot);
             case 2
+                [m l g y1_0 y2_0] = getParams();
                 simulate(m, l, g, dt, y1_0, y2_0, hasNext, true, @forEachLqrAndPlot);
             case 3
+                [m l g y1_0 y2_0] = getParams();
                 generateData(m, l, g, dt);
             case 4
                 trainNetwork();
             case 5
+                [m l g y1_0 y2_0] = getParams();
                 simulate(m, l, g, dt, y1_0, y2_0, hasNext, false, @forEachNeural);
             case 6
+                [m l g y1_0 y2_0] = getParams();
                 simulate(m, l, g, dt, y1_0, y2_0, hasNext, true, @forEachNeural);
+            case 7
+                [m l g y1_0 y2_0] = getParams();
+                simulate(m, l, g, dt, y1_0, y2_0, hasNext, true, @forEachTest);
         end
 
         % zamkniecie plikow jesli jakies zostaly otwarte
         fclose('all');
     end
+end
+
+function [m, l, g, y1_0, y2_0] = getParams()
+    prompt = {'Masa podstawki', 'Masa czlonu #1', 'Masa czlonu #2', 'Dlugosc czlonu #1', 'Dlugosc czlonu #2', 'Przyspieszenie ziemskie'};
+    answer = inputdlg(prompt, 'Parametry symulacji', 1, {'5', '2', '3', '4', '4', '9.81'});
+    m = [str2num(char(answer(1))) str2num(char(answer(2))) str2num(char(answer(3)))];
+    l = [str2num(char(answer(4))) str2num(char(answer(5)))];
+    g = str2num(char(answer(6)));
+    prompt = {'Polozenie podstawki', 'Wychylenie czlonu #1', 'Wychylenie czlonu #2', 'Predkosc podstawki', 'Predkosc katowa czlonu #1', 'Predkosc katowa czlonu #2'};
+    answer = inputdlg(prompt, 'Warunki poczatkowe', 1, {'0', '0.1', '0', '0', '0', '0'});
+    y1_0 = [str2num(char(answer(1))) str2num(char(answer(2))) str2num(char(answer(3)))];
+    y2_0 = [str2num(char(answer(4))) str2num(char(answer(5))) str2num(char(answer(6)))];
 end
 
 % wytrenuj siec
@@ -142,17 +163,17 @@ function trainNetwork()
 end
 
 function generateData(m, l, g, dt)
-    % definicja ile kroków czasowych użyć dla danych uczących
+    % definicja ile krokAlw czasowych uLLyć dla danych uczących
     hasNext = @(i) i < 200;
     
     % ile sumulacji przeprowadzić do wygenerowania danych uczących
     N = 20;
     
-    % wyświetlenie paska postępu
+    % wyL�wietlenie paska postępu
     h = waitbar(0, 'Generowanie danych uczacych');
     
     for i = 1:N
-        % sprawdzanie czy losowe parametry początkowe nie są za duże
+        % sprawdzanie czy losowe parametry początkowe nie są za duLLe
         test = Inf;
         while test > 0.2
             y1_0 = randn(1, 3)/10;
@@ -179,6 +200,99 @@ function generateData(m, l, g, dt)
     else
         msgbox('Generowanie przerwane na zyczenie uzytkownika', 'Koniec');
     end
+end
+
+function u = forEachTest(m, l, g, y, i, dt, T0, G, Q, R, M_, N_, isFast)
+    persistent RMS;
+    persistent U;
+    persistent U2;
+    persistent max;
+    persistent max2;
+    if isempty(RMS) 
+        RMS = [];
+        U = [];
+        U2 = [];
+        max = 10;
+        max2 = 10;
+    end
+    
+    u = forEachNeural(m, l, g, y, i, dt, T0, G, Q, R, M_, N_, true);
+    u2 = forEachLqr(m, l, g, y, i, dt, T0, G, Q, R, M_, N_);
+    
+    
+    
+    RMS = [RMS rms(u-u2)];
+    U = [U u];
+    U2 = [U2 u2];
+    
+    maxCut = 50;
+    if abs(u) > max & abs(u) < maxCut
+        max = abs(u);
+    end
+    if abs(u2) > max & abs(u2) < maxCut
+       max = abs(u2);
+    end
+    
+    if abs(u) > max2
+        max2 = abs(u);
+    end
+    if abs(u2) > max2
+        max2 = abs(u2);
+    end
+     
+    subplot(2, 2, 1);
+    plot(U, U2, '+');
+    axis square;
+    xlim([-max max]);
+    ylim([-max max]);
+    xlabel('Wymuszenie u (SSN)');
+    ylabel('Wymuszenie u (LQR)');
+    title('Korelacja pomiedzy danymi [...]');
+    hold on;
+    plot([-max max], [-max max], 'g');
+    hold off;
+    
+    subplot(2, 2, 2);
+    plot(U, U2, '+');
+    axis square;
+    xlim([-max2 max2]);
+    ylim([-max2 max2]);
+    xlabel('Wymuszenie u (SSN)');
+    ylabel('Wymuszenie u (LQR)');
+    title('[...] generowanymi przez LQR i SSN');
+    hold on;
+    plot([-max2 max2], [-max2 max2], 'g');
+    hold off;
+    
+    subplot(2, 1, 2);
+    cut = 200;
+    if i < cut
+        x = 0:i;
+        x = x*dt;
+        plot(x, RMS);
+    else
+        x = (i-cut):(i);
+        x = x*dt;
+        plot(x, RMS(end-cut:end));
+        xlim([x(1) x(end)]);
+    end
+    xlabel('Czat [s]');
+    ylabel('RMS');
+    title('Zmiana bledu sredniokwadratowego w czasie');
+    
+    % przycisk zatrzymania symulacji
+    uicontrol('Position',[5 5 70 25], ...
+               'String', 'STOP', ...
+               'Callback', @stopCb);
+    
+    % akcja po wcisnieciu przycisku zatrzymania symulacji
+    function stopCb(popup, callbackdata)
+        global stopSimulation
+        stopSimulation = true;
+        msgbox('Zatrzymano symulacje');
+    end
+    
+    drawnow;
 end
 
 % obliczanie korekcji polozenia podstawki za pomoca metody LQR
